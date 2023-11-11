@@ -1,0 +1,85 @@
+import os
+import glob
+import random
+import tkinter as tk
+from tkinter import ttk
+from tkinter import messagebox
+from pygame import mixer
+from pystray import MenuItem, Icon
+from PIL import ImageTk, Image
+
+
+def play_music():
+    if not mixer.music.get_busy():
+        mixer.music.load(current_song.get())
+        mixer.music.play()
+
+
+def stop_music():
+    mixer.music.stop()
+
+
+def shuffle_playlist():
+    random.shuffle(playlist)
+
+
+def show_notification(title, message):
+    messagebox.showinfo(title, message)
+
+
+def create_menu():
+    menu = (
+        MenuItem('Play', play_music),
+        MenuItem('Stop', stop_music),
+        MenuItem('Shuffle Playlist', shuffle_playlist),
+    )
+    return menu
+
+
+def on_exit(icon, item):
+    mixer.music.stop()
+    icon.stop()
+
+
+def main():
+    global current_song, playlist
+
+    mixer.init()
+
+    # Add your music directory path below
+    music_directory = r'C:\Users\rafae\Downloads\yakuza 10 years in the joint'
+
+    # Get all supported music files from the directory
+    playlist = glob.glob(os.path.join(music_directory, '*.mp3'))
+
+    if not playlist:
+        show_notification('No Music Found', 'Please place some MP3 files in the music directory.')
+        return
+
+    window = tk.Tk()
+    window.title('Music Player')
+    window.geometry('300x200')
+
+    current_song = tk.StringVar()
+    current_song.set(playlist[0])
+
+    play_button = ttk.Button(window, text='Play', command=play_music)
+    play_button.pack(pady=10)
+
+    stop_button = ttk.Button(window, text='Stop', command=stop_music)
+    stop_button.pack(pady=10)
+
+    shuffle_button = ttk.Button(window, text='Shuffle Playlist', command=shuffle_playlist)
+    shuffle_button.pack(pady=10)
+
+    icon = Icon('Music Player')
+    icon.icon = ImageTk.PhotoImage(Image.open(r"C:\Users\rafae\Downloads\nishiki.jpg"))
+    icon.menu = create_menu()
+    icon.run()
+
+    window.protocol('WM_DELETE_WINDOW', lambda: on_exit(icon, None))
+    window.mainloop()
+
+
+if __name__ == '__main__':
+    main()
