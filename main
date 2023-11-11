@@ -1,85 +1,83 @@
 import os
-import glob
+import pygame
 import random
-import tkinter as tk
-from tkinter import ttk
-from tkinter import messagebox
-from pygame import mixer
-from pystray import MenuItem, Icon
-from PIL import ImageTk, Image
+import threading
+from tkinter import Tk, Label, Button, filedialog
+import pystray
+from PIL import Image
 
+def on_quit(icon, item):
+    app.root.withdraw()  # Hide the app window instead of closing it
 
-def play_music():
-    if not mixer.music.get_busy():
-        mixer.music.load(current_song.get())
-        mixer.music.play()
+class MusicPlayer:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Music Player")
+        self.song_list = []  # List to store selected music files
+        self.current_index = -1  # Index of the currently playing song
 
+        self.label = Label(root, text="Select music files")
+        self.label.pack(pady=20)
 
-def stop_music():
-    mixer.music.stop()
+        self.browse_button = Button(root, text="Browse", command=self.load_music)
+        self.browse_button.pack()
 
+        self.shuffle_button = Button(root, text="Shuffle", state="disabled", command=self.shuffle_music)
+        self.shuffle_button.pack()
 
-def shuffle_playlist():
-    random.shuffle(playlist)
+        self.play_button = Button(root, text="Play", state="disabled", command=self.play_music)
+        self.play_button.pack()
 
+        pygame.init()
 
-def show_notification(title, message):
-    messagebox.showinfo(title, message)
+    def load_music(self):
+        self.song_list = list(filedialog.askopenfilenames(filetypes=[("Audio Files", "*.mp3 *.wav")]))
+        if self.song_list:
+            self.label.config(text=f"Selected {len(self.song_list)} songs")
+            self.shuffle_button.config(state="normal")
+            self.play_button.config(state="normal")
 
+    def shuffle_music(self):
+        if self.song_list:
+            random.shuffle(self.song_list)
+            self.current_index = -1
+            self.label.config(text="Shuffled playlist")
 
-def create_menu():
-    menu = (
-        MenuItem('Play', play_music),
-        MenuItem('Stop', stop_music),
-        MenuItem('Shuffle Playlist', shuffle_playlist),
-    )
-    return menu
+    def play_music(self):
+        if self.song_list:
+            if self.current_index == -1:
+                self.shuffle_music()
 
+            if self.current_index < len(self.song_list) - 1:
+                self.current_index += 1
+            else:
+                self.current_index = 0
 
-def on_exit(icon, item):
-    mixer.music.stop()
-    icon.stop()
+            current_song = self.song_list[self.current_index]
+            pygame.mixer.init()
+            pygame.mixer.music.load(current_song)
+            pygame.mixer.music.play()
+            self.label.config(text=f"Playing: {os.path.basename(current_song)}")
 
-
-def main():
-    global current_song, playlist
-
-    mixer.init()
-
-    # Add your music directory path below
-    music_directory = r'C:\Users\rafae\Downloads\yakuza 10 years in the joint'
-
-    # Get all supported music files from the directory
-    playlist = glob.glob(os.path.join(music_directory, '*.mp3'))
-
-    if not playlist:
-        show_notification('No Music Found', 'Please place some MP3 files in the music directory.')
-        return
-
-    window = tk.Tk()
-    window.title('Music Player')
-    window.geometry('300x200')
-
-    current_song = tk.StringVar()
-    current_song.set(playlist[0])
-
-    play_button = ttk.Button(window, text='Play', command=play_music)
-    play_button.pack(pady=10)
-
-    stop_button = ttk.Button(window, text='Stop', command=stop_music)
-    stop_button.pack(pady=10)
-
-    shuffle_button = ttk.Button(window, text='Shuffle Playlist', command=shuffle_playlist)
-    shuffle_button.pack(pady=10)
-
-    icon = Icon('Music Player')
-    icon.icon = ImageTk.PhotoImage(Image.open(r"C:\Users\rafae\Downloads\nishiki.jpg"))
-    icon.menu = create_menu()
+def create_tray_icon():
+    menu = (pystray.MenuItem('Open', open_window), pystray.MenuItem('Exit', exit_application))
+    image = Image.open(r"C:\Users\rafae\Downloads\nishiki.jpg")  # Replace with the actual path to your background image file
+    icon = pystray.Icon("music_player", image, "Music Player", menu)
     icon.run()
 
-    window.protocol('WM_DELETE_WINDOW', lambda: on_exit(icon, None))
-    window.mainloop()
+def open_window(icon, item):
+    app.root.deiconify()  # Show the app window
 
+def exit_application(icon, item):
+    icon.stop()
+    app.root.destroy()  # Close the application gracefully
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    tray_thread = threading.Thread(target=create_tray_icon)
+    tray_thread.daemon = True
+    tray_thread.start()
+
+    root = Tk()
+    app = MusicPlayer(root)
+    app.root.protocol("WM_DELETE_WINDOW", lambda: on_quit(None, None))  # Minimize to tray on window close
+    root.mainloop()
