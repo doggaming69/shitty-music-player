@@ -61,7 +61,7 @@ class MusicPlayer:
 
 def create_tray_icon():
     menu = (pystray.MenuItem('Open', open_window), pystray.MenuItem('Exit', exit_application))
-    image = Image.open(r"C:\Users\rafae\Downloads\nishiki.jpg")  # Replace with the actual path to your background image file
+    image = Image.open(r"image here")  # Replace with the actual path to your background image file
     icon = pystray.Icon("music_player", image, "Music Player", menu)
     icon.run()
 
